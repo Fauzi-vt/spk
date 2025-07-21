@@ -30,15 +30,15 @@ export function StatsCard({ title, value, icon: Icon, color = "indigo", descript
 
   return (
     <Card>
-      <CardContent className="pt-4">
+      <CardContent className="pt-3 md:pt-4">
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${colorClasses[color]}`}>
-            <Icon className="w-5 h-5" />
+          <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg flex items-center justify-center ${colorClasses[color]}`}>
+            <Icon className="w-4 h-4 md:w-5 md:h-5" />
           </div>
-          <div>
-            <p className="text-sm text-neutral-600">{title}</p>
-            <p className={`text-2xl font-bold ${valueColorClasses[color]}`}>{value}</p>
-            {description && <p className="text-xs text-neutral-500 mt-1">{description}</p>}
+          <div className="min-w-0 flex-1">
+            <p className="text-xs md:text-sm text-neutral-600 truncate">{title}</p>
+            <p className={`text-lg md:text-2xl font-bold ${valueColorClasses[color]}`}>{value}</p>
+            {description && <p className="text-xs text-neutral-500 mt-1 truncate">{description}</p>}
           </div>
         </div>
       </CardContent>
