@@ -359,16 +359,34 @@ export default function PerhitunganPage() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-neutral-800 mb-2">Proses Perhitungan TOPSIS</h1>
-        <p className="text-neutral-600">Ikuti langkah-langkah perhitungan metode TOPSIS untuk mendapatkan hasil akhir</p>
+    <div className="max-w-7xl mx-auto">
+      <div className="mb-6 md:mb-8">
+        <h1 className="responsive-text-xl font-bold tracking-tight text-neutral-800 mb-2">Proses Perhitungan TOPSIS</h1>
+        <p className="responsive-text-sm text-neutral-600">Ikuti langkah-langkah perhitungan metode TOPSIS untuk mendapatkan hasil akhir</p>
       </div>
 
-      {/* Progress Steps */}
-      <Card className="mb-6">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
+      {/* Progress Steps - Mobile Optimized */}
+      <Card className="mb-4 md:mb-6">
+        <CardContent className="pt-4 md:pt-6">
+          {/* Mobile Progress - Vertical */}
+          <div className="block md:hidden">
+            <div className="space-y-3">
+              {steps.map((step) => (
+                <div key={step.id} className={`flex items-center p-3 rounded-lg ${currentStep >= step.id ? "bg-indigo-50 border border-indigo-200" : "bg-neutral-50"}`}>
+                  <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${currentStep >= step.id ? "bg-indigo-600 border-indigo-600 text-white" : "border-neutral-300 text-neutral-400"}`}>
+                    {currentStep > step.id ? <CheckCircle className="w-4 h-4" /> : <span className="text-xs font-medium">{step.id}</span>}
+                  </div>
+                  <div className="ml-3 min-w-0 flex-1">
+                    <div className={`text-sm font-medium ${currentStep >= step.id ? "text-neutral-800" : "text-neutral-400"}`}>{step.title}</div>
+                    <div className="text-xs text-neutral-500">{step.description}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Desktop Progress - Horizontal */}
+          <div className="hidden md:flex items-center justify-between">
             {steps.map((step, index) => (
               <div key={step.id} className="flex items-center">
                 <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${currentStep >= step.id ? "bg-indigo-600 border-indigo-600 text-white" : "border-neutral-300 text-neutral-400"}`}>
@@ -389,11 +407,31 @@ export default function PerhitunganPage() {
       {currentStep === 1 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl font-semibold text-neutral-700">Langkah 1: Matriks Keputusan</CardTitle>
-            <p className="text-sm text-neutral-600">Matriks yang berisi penilaian setiap alternatif terhadap kriteria</p>
+            <CardTitle className="responsive-text-lg font-semibold text-neutral-700">Langkah 1: Matriks Keputusan</CardTitle>
+            <p className="responsive-text-xs text-neutral-600">Matriks yang berisi penilaian setiap alternatif terhadap kriteria</p>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            {/* Mobile Card View */}
+            <div className="mobile-card-layout space-y-4">
+              {alternatif.map((alt) => (
+                <Card key={alt.id} className="border border-neutral-200">
+                  <CardContent className="p-4">
+                    <h4 className="font-semibold text-neutral-800 mb-3">{alt.nama}</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      {kriteria.map((kriteriaItem) => (
+                        <div key={kriteriaItem.id} className="flex justify-between items-center">
+                          <span className="text-sm text-neutral-600 truncate pr-2">{kriteriaItem.nama}</span>
+                          <span className="font-medium">{penilaian[alt.id][kriteriaItem.id]}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="desktop-table-layout table-mobile-scroll">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -429,13 +467,33 @@ export default function PerhitunganPage() {
       {currentStep === 2 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl font-semibold text-neutral-700">Langkah 2: Normalisasi Matriks</CardTitle>
-            <p className="text-sm text-neutral-600">
+            <CardTitle className="responsive-text-lg font-semibold text-neutral-700">Langkah 2: Normalisasi Matriks</CardTitle>
+            <p className="responsive-text-xs text-neutral-600">
               Normalisasi menggunakan rumus: r<sub>ij</sub> = x<sub>ij</sub> / √(Σx<sub>ij</sub>²)
             </p>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            {/* Mobile Card View */}
+            <div className="mobile-card-layout space-y-4">
+              {alternatif.map((alt) => (
+                <Card key={alt.id} className="border border-neutral-200">
+                  <CardContent className="p-4">
+                    <h4 className="font-semibold text-neutral-800 mb-3">{alt.nama}</h4>
+                    <div className="grid grid-cols-1 gap-2">
+                      {kriteria.map((kriteriaItem) => (
+                        <div key={kriteriaItem.id} className="flex justify-between items-center py-1">
+                          <span className="text-sm text-neutral-600 truncate pr-2">{kriteriaItem.nama}</span>
+                          <span className="font-mono text-sm">{normalizedMatrix[alt.id][kriteriaItem.id].toFixed(4)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="desktop-table-layout table-mobile-scroll">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -452,7 +510,7 @@ export default function PerhitunganPage() {
                     <TableRow key={alt.id}>
                       <TableCell className="font-medium">{alt.nama}</TableCell>
                       {kriteria.map((kriteriaItem) => (
-                        <TableCell key={kriteriaItem.id} className="text-center">
+                        <TableCell key={kriteriaItem.id} className="text-center font-mono text-sm">
                           {normalizedMatrix[alt.id][kriteriaItem.id].toFixed(4)}
                         </TableCell>
                       ))}
@@ -468,25 +526,46 @@ export default function PerhitunganPage() {
       {currentStep === 3 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl font-semibold text-neutral-700">Langkah 3: Matriks Ternormalisasi Terbobot</CardTitle>
-            <p className="text-sm text-neutral-600">Mengalikan matriks ternormalisasi dengan bobot kriteria</p>
+            <CardTitle className="responsive-text-lg font-semibold text-neutral-700">Langkah 3: Matriks Ternormalisasi Terbobot</CardTitle>
+            <p className="responsive-text-xs text-neutral-600">Mengalikan matriks ternormalisasi dengan bobot kriteria</p>
           </CardHeader>
           <CardContent>
             <div className="mb-4">
               <h4 className="font-medium text-neutral-800 mb-2">Bobot Kriteria:</h4>
-              <div className="flex gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-wrap gap-2 text-sm">
                 {kriteria.map((kriteriaItem) => {
                   const totalBobot = kriteria.reduce((sum, k) => sum + k.bobot, 0);
                   const normalizedBobot = ((kriteriaItem.bobot / totalBobot) * 100).toFixed(1);
                   return (
-                    <span key={kriteriaItem.id} className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded">
+                    <span key={kriteriaItem.id} className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-center">
                       {kriteriaItem.nama}: {normalizedBobot}%
                     </span>
                   );
                 })}
               </div>
             </div>
-            <div className="overflow-x-auto">
+
+            {/* Mobile Card View */}
+            <div className="mobile-card-layout space-y-4">
+              {alternatif.map((alt) => (
+                <Card key={alt.id} className="border border-neutral-200">
+                  <CardContent className="p-4">
+                    <h4 className="font-semibold text-neutral-800 mb-3">{alt.nama}</h4>
+                    <div className="grid grid-cols-1 gap-2">
+                      {kriteria.map((kriteriaItem) => (
+                        <div key={kriteriaItem.id} className="flex justify-between items-center py-1">
+                          <span className="text-sm text-neutral-600 truncate pr-2">{kriteriaItem.nama}</span>
+                          <span className="font-mono text-sm">{weightedMatrix[alt.id][kriteriaItem.id].toFixed(4)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="desktop-table-layout table-mobile-scroll">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -552,9 +631,9 @@ export default function PerhitunganPage() {
       )}
 
       {/* Action Button */}
-      <div className="mt-8 flex justify-center">
+      <div className="mt-6 md:mt-8 flex justify-center">
         {currentStep < 4 ? (
-          <Button onClick={handleNextStep} disabled={isCalculating} className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700">
+          <Button onClick={handleNextStep} disabled={isCalculating} className="w-full sm:w-auto px-6 md:px-8 py-3 bg-indigo-600 hover:bg-indigo-700">
             {isCalculating ? (
               <>
                 <Calculator className="w-4 h-4 mr-2 animate-spin" />
@@ -563,28 +642,32 @@ export default function PerhitunganPage() {
             ) : (
               <>
                 <Calculator className="w-4 h-4 mr-2" />
-                Lanjutkan Perhitungan
+                <span className="hidden sm:inline">Lanjutkan Perhitungan</span>
+                <span className="sm:hidden">Lanjutkan</span>
               </>
             )}
           </Button>
         ) : currentStep === 4 ? (
-          <Button onClick={handleCalculateResults} disabled={isCalculating} className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700">
+          <Button onClick={handleCalculateResults} disabled={isCalculating} className="w-full sm:w-auto px-6 md:px-8 py-3 bg-emerald-600 hover:bg-emerald-700">
             {isCalculating ? (
               <>
                 <Calculator className="w-4 h-4 mr-2 animate-spin" />
-                Menyimpan Hasil...
+                <span className="hidden sm:inline">Menyimpan Hasil...</span>
+                <span className="sm:hidden">Menyimpan...</span>
               </>
             ) : (
               <>
                 <Calculator className="w-4 h-4 mr-2" />
-                Hitung & Simpan Hasil
+                <span className="hidden sm:inline">Hitung & Simpan Hasil</span>
+                <span className="sm:hidden">Hitung Hasil</span>
               </>
             )}
           </Button>
         ) : (
-          <Button onClick={() => (window.location.href = "/hasil")} className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700">
+          <Button onClick={() => (window.location.href = "/hasil")} className="w-full sm:w-auto px-6 md:px-8 py-3 bg-emerald-600 hover:bg-emerald-700">
             <ArrowRight className="w-4 h-4 mr-2" />
-            Lihat Hasil Akhir
+            <span className="hidden sm:inline">Lihat Hasil Akhir</span>
+            <span className="sm:hidden">Lihat Hasil</span>
           </Button>
         )}
       </div>
