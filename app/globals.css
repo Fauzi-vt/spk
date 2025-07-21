@@ -121,6 +121,51 @@
   }
 }
 
+@layer utilities {
+  /* Mobile responsive table utilities */
+  .table-mobile-scroll {
+    @apply overflow-x-auto;
+  }
+
+  .table-mobile-scroll table {
+    @apply min-w-full;
+  }
+
+  .mobile-card-layout {
+    @apply block md:hidden;
+  }
+
+  .desktop-table-layout {
+    @apply hidden md:block;
+  }
+
+  /* Improved responsive text sizes */
+  .responsive-text-xs {
+    @apply text-xs md:text-sm;
+  }
+
+  .responsive-text-sm {
+    @apply text-sm md:text-base;
+  }
+
+  .responsive-text-base {
+    @apply text-base md:text-lg;
+  }
+
+  .responsive-text-lg {
+    @apply text-lg md:text-xl;
+  }
+
+  .responsive-text-xl {
+    @apply text-xl md:text-2xl;
+  }
+
+  /* Mobile spacing utilities */
+  .mobile-spacing {
+    @apply px-4 py-4 md:px-6 md:py-6;
+  }
+}
+
 @media print {
   .print\:block {
     display: block !important;

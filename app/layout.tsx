@@ -30,12 +30,12 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AuthProvider>
-          <SidebarProvider defaultOpen={true}>
+          <SidebarProvider defaultOpen={false}>
             <div className="flex min-h-screen w-full">
               <AppSidebar />
-              <div className="flex-1 flex flex-col">
+              <div className="flex-1 flex flex-col min-w-0">
                 <Header />
-                <main className="flex-1 bg-neutral-50">{children}</main>
+                <main className="flex-1 bg-neutral-50 p-4 md:p-6 overflow-x-hidden">{children}</main>
               </div>
             </div>
           </SidebarProvider>
