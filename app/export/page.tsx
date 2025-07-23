@@ -48,12 +48,12 @@ export default function ExportPage() {
       setError(null);
 
       // Fetch kriteria
-      const { data: kriteriaData, error: kriteriaError } = await supabase.from("kriteria").select("*").eq("user_id", user?.id).order("nama");
+      const { data: kriteriaData, error: kriteriaError } = await supabase.from("kriteria").select("*").eq("user_id", user?.id);
 
       if (kriteriaError) throw kriteriaError;
 
       // Fetch alternatif
-      const { data: alternatifData, error: alternatifError } = await supabase.from("alternatif").select("*").eq("user_id", user?.id).order("nama");
+      const { data: alternatifData, error: alternatifError } = await supabase.from("alternatif").select("*").eq("user_id", user?.id);
 
       if (alternatifError) throw alternatifError;
 
@@ -92,8 +92,56 @@ export default function ExportPage() {
         return;
       }
 
+      // Custom sorting for kriteria to match other pages
+      const kriteriaPositionMap: Record<string, number> = {
+        "kualitas": 0, "daya serap": 1, "tekstur": 2, "tesktur": 2,
+        "harga permeter": 3, "ketersediaan di pasar": 4, "ramah lingkungan": 5,
+        "kemudahan proses produksi batik": 6,
+        "Kualitas": 0, "Daya serap": 1, "Tekstur": 2, "Tesktur": 2,
+        "Harga permeter": 3, "Ketersediaan di pasar": 4, "Ramah lingkungan": 5,
+        "Kemudahan proses produksi batik": 6,
+      };
+
+      const getKriteriaIndex = (kriteriaName: string) => {
+        if (kriteriaPositionMap[kriteriaName] !== undefined) return kriteriaPositionMap[kriteriaName];
+        const lowerName = kriteriaName.toLowerCase().trim();
+        if (kriteriaPositionMap[lowerName] !== undefined) return kriteriaPositionMap[lowerName];
+        if (lowerName.includes("kualitas")) return 0;
+        if (lowerName.includes("daya") && lowerName.includes("serap")) return 1;
+        if (lowerName.includes("tekstur") || lowerName.includes("tesktur")) return 2;
+        if (lowerName.includes("harga")) return 3;
+        if (lowerName.includes("ketersediaan")) return 4;
+        if (lowerName.includes("ramah")) return 5;
+        if (lowerName.includes("kemudahan") || lowerName.includes("proses") || lowerName.includes("produksi")) return 6;
+        return 999;
+      };
+
+      // Custom sorting for alternatif to match other pages
+      const alternatifPositionMap: Record<string, number> = {
+        "Kain primisima": 0, "katun biasa": 1, "Kain doby": 2,
+        "kain viscose": 3, "kain sutra": 4, "poliester": 5, "rayon": 6,
+      };
+
+      const getAlternatifIndex = (alternatifName: string) => {
+        if (alternatifPositionMap[alternatifName] !== undefined) return alternatifPositionMap[alternatifName];
+        const lowerName = alternatifName.toLowerCase().trim();
+        const matchingKey = Object.keys(alternatifPositionMap).find(key => key.toLowerCase() === lowerName);
+        if (matchingKey) return alternatifPositionMap[matchingKey];
+        if (lowerName.includes("primisma") || lowerName.includes("prisma")) return 0;
+        if (lowerName.includes("katun") && (lowerName.includes("biasa") || !lowerName.includes("dobi"))) return 1;
+        if (lowerName.includes("doby") || lowerName.includes("dobi")) return 2;
+        if (lowerName.includes("viscose")) return 3;
+        if (lowerName.includes("sutra")) return 4;
+        if (lowerName.includes("poliester") || lowerName.includes("polyester")) return 5;
+        if (lowerName.includes("rayon")) return 6;
+        return 999;
+      };
+
+      const sortedKriteriaData = kriteriaData.sort((a, b) => getKriteriaIndex(a.nama) - getKriteriaIndex(b.nama));
+      const sortedAlternatifData = alternatifData.sort((a, b) => getAlternatifIndex(a.nama) - getAlternatifIndex(b.nama));
+
       // Calculate normalized weights
-      const totalBobot = kriteriaData.reduce((sum, k) => sum + k.bobot, 0);
+      const totalBobot = sortedKriteriaData.reduce((sum, k) => sum + k.bobot, 0);
 
       // Build report data
       const reportData: ReportData = {
@@ -102,10 +150,10 @@ export default function ExportPage() {
           subtitle: "Menggunakan Metode TOPSIS (Technique for Order Preference by Similarity to Ideal Solution)",
           generatedAt: new Date(),
           generatedBy: user?.email || "User",
-          totalKriteria: kriteriaData.length,
-          totalAlternatif: alternatifData.length,
+          totalKriteria: sortedKriteriaData.length,
+          totalAlternatif: sortedAlternatifData.length,
         },
-        kriteria: kriteriaData.map((k) => ({
+        kriteria: sortedKriteriaData.map((k) => ({
           nama: k.nama,
           bobot: k.bobot,
           atribut: k.atribut,
@@ -519,10 +567,8 @@ export default function ExportPage() {
       // Matriks ternormalisasi
       const normalisasi = penilaianMatrix.map((row) => row.map((v, j) => (pembagi[j] > 0 ? v / pembagi[j] : 0)));
 
-      // Bobot normal dan matriks terbobot
-      const totalBobot = bobotArr.reduce((a, b) => a + b, 0);
-      const bobotNormal = bobotArr.map((b) => (totalBobot > 0 ? b / totalBobot : 0));
-      const terbobot = normalisasi.map((row) => row.map((v, j) => v * bobotNormal[j]));
+      // Bobot langsung tanpa normalisasi (untuk sesuai dengan Excel)
+      const terbobot = normalisasi.map((row) => row.map((v, j) => v * bobotArr[j]));
 
       // Solusi ideal positif/negatif
       const idealPositif = kriteria.map((k, j) => {
