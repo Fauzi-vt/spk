@@ -29,12 +29,12 @@ export default function PerhitunganPage() {
       setError(null);
 
       // Fetch kriteria
-      const { data: kriteriaData, error: kriteriaError } = await supabase.from("kriteria").select("*").eq("user_id", user.id).order("nama");
+      const { data: kriteriaData, error: kriteriaError } = await supabase.from("kriteria").select("*").eq("user_id", user.id);
 
       if (kriteriaError) throw kriteriaError;
 
       // Fetch alternatif
-      const { data: alternatifData, error: alternatifError } = await supabase.from("alternatif").select("*").eq("user_id", user.id).order("nama");
+      const { data: alternatifData, error: alternatifError } = await supabase.from("alternatif").select("*").eq("user_id", user.id);
 
       if (alternatifError) throw alternatifError;
 
@@ -56,13 +56,100 @@ export default function PerhitunganPage() {
         deskripsi: item.deskripsi,
       }));
 
+      // Custom sorting for kriteria to match penilaian page order
+      const kriteriaPositionMap: Record<string, number> = {
+        "kualitas": 0,
+        "daya serap": 1,
+        "tekstur": 2,
+        "tesktur": 2,  // Actual database name (missing 'r')
+        "harga permeter": 3,
+        "ketersediaan di pasar": 4,
+        "ramah lingkungan": 5,
+        "kemudahan proses produksi batik": 6,
+        
+        "Kualitas": 0,
+        "Daya serap": 1,
+        "Tekstur": 2,
+        "Tesktur": 2,  // Actual database name (missing 'r')
+        "Harga permeter": 3,
+        "Ketersediaan di pasar": 4,
+        "Ramah lingkungan": 5,
+        "Kemudahan proses produksi batik": 6,
+      };
+
+      const getKriteriaIndex = (kriteriaName: string) => {
+        if (kriteriaPositionMap[kriteriaName] !== undefined) {
+          return kriteriaPositionMap[kriteriaName];
+        }
+        
+        const lowerName = kriteriaName.toLowerCase().trim();
+        if (kriteriaPositionMap[lowerName] !== undefined) {
+          return kriteriaPositionMap[lowerName];
+        }
+        
+        if (lowerName.includes("kualitas")) return 0;
+        if (lowerName.includes("daya") && lowerName.includes("serap")) return 1;
+        if (lowerName.includes("tekstur") || lowerName.includes("tesktur")) return 2;
+        if (lowerName.includes("harga")) return 3;
+        if (lowerName.includes("ketersediaan")) return 4;
+        if (lowerName.includes("ramah")) return 5;
+        if (lowerName.includes("kemudahan") || lowerName.includes("proses") || lowerName.includes("produksi")) return 6;
+        
+        return 999;
+      };
+
+      // Custom sorting for alternatif to match penilaian page order
+      const alternatifPositionMap: Record<string, number> = {
+        "Kain primisima": 0,
+        "katun biasa": 1,
+        "Kain doby": 2,
+        "kain viscose": 3,
+        "kain sutra": 4,
+        "poliester": 5,
+        "rayon": 6,
+      };
+
+      const getAlternatifIndex = (alternatifName: string) => {
+        if (alternatifPositionMap[alternatifName] !== undefined) {
+          return alternatifPositionMap[alternatifName];
+        }
+        
+        const lowerName = alternatifName.toLowerCase().trim();
+        const matchingKey = Object.keys(alternatifPositionMap).find(key => key.toLowerCase() === lowerName);
+        if (matchingKey) {
+          return alternatifPositionMap[matchingKey];
+        }
+        
+        if (lowerName.includes("primisma") || lowerName.includes("prisma")) return 0;
+        if (lowerName.includes("katun") && (lowerName.includes("biasa") || !lowerName.includes("dobi"))) return 1;
+        if (lowerName.includes("doby") || lowerName.includes("dobi")) return 2;
+        if (lowerName.includes("viscose")) return 3;
+        if (lowerName.includes("sutra")) return 4;
+        if (lowerName.includes("poliester") || lowerName.includes("polyester")) return 5;
+        if (lowerName.includes("rayon")) return 6;
+        
+        return 999;
+      };
+
+      const sortedKriteria = mappedKriteria.sort((a, b) => {
+        const indexA = getKriteriaIndex(a.nama);
+        const indexB = getKriteriaIndex(b.nama);
+        return indexA - indexB;
+      });
+
+      const sortedAlternatif = mappedAlternatif.sort((a, b) => {
+        const indexA = getAlternatifIndex(a.nama);
+        const indexB = getAlternatifIndex(b.nama);
+        return indexA - indexB;
+      });
+
       // Check if we have complete data
-      if (!mappedKriteria.length) {
+      if (!sortedKriteria.length) {
         setError("Belum ada kriteria yang ditambahkan. Silakan tambahkan kriteria terlebih dahulu.");
         return;
       }
 
-      if (!mappedAlternatif.length) {
+      if (!sortedAlternatif.length) {
         setError("Belum ada alternatif yang ditambahkan. Silakan tambahkan alternatif terlebih dahulu.");
         return;
       }
@@ -73,22 +160,22 @@ export default function PerhitunganPage() {
       }
 
       // Check if all combinations are assessed
-      const expectedAssessments = mappedKriteria.length * mappedAlternatif.length;
+      const expectedAssessments = sortedKriteria.length * sortedAlternatif.length;
       console.log("Pengecekan penilaian:", {
-        kriteriaCount: mappedKriteria.length,
-        alternatifCount: mappedAlternatif.length,
+        kriteriaCount: sortedKriteria.length,
+        alternatifCount: sortedAlternatif.length,
         expectedAssessments,
         actualAssessments: penilaianData.length,
         penilaianData,
       });
 
       if (penilaianData.length < expectedAssessments) {
-        setError(`Penilaian belum lengkap. Diperlukan ${expectedAssessments} penilaian (${mappedKriteria.length} kriteria × ${mappedAlternatif.length} alternatif), saat ini hanya ada ${penilaianData.length}.`);
+        setError(`Penilaian belum lengkap. Diperlukan ${expectedAssessments} penilaian (${sortedKriteria.length} kriteria × ${sortedAlternatif.length} alternatif), saat ini hanya ada ${penilaianData.length}.`);
         return;
       }
 
-      setKriteria(mappedKriteria);
-      setAlternatif(mappedAlternatif);
+      setKriteria(sortedKriteria);
+      setAlternatif(sortedAlternatif);
 
       // Convert penilaian to the expected format
       const penilaianMap: { [key: string]: { [key: string]: number } } = {};
@@ -176,16 +263,16 @@ export default function PerhitunganPage() {
   // Calculate weighted normalized matrix
   const calculateWeightedMatrix = (normalizedMatrix: { [key: string]: { [key: string]: number } }) => {
     const weighted: { [key: string]: { [key: string]: number } } = {};
-    const totalBobot = kriteria.reduce((sum, k) => sum + k.bobot, 0);
 
     alternatif.forEach((alt) => {
       weighted[alt.id] = {};
       kriteria.forEach((kriteriaItem) => {
-        const normalizedBobot = totalBobot > 0 ? kriteriaItem.bobot / totalBobot : 1 / kriteria.length;
+        // Use weight directly without normalizing (to match Excel)
+        const weight = kriteriaItem.bobot;
         const normalizedValue = normalizedMatrix[alt.id][kriteriaItem.id];
 
-        if (!isNaN(normalizedValue) && !isNaN(normalizedBobot)) {
-          weighted[alt.id][kriteriaItem.id] = normalizedValue * normalizedBobot;
+        if (!isNaN(normalizedValue) && !isNaN(weight)) {
+          weighted[alt.id][kriteriaItem.id] = normalizedValue * weight;
         } else {
           weighted[alt.id][kriteriaItem.id] = 0;
         }
@@ -272,10 +359,10 @@ export default function PerhitunganPage() {
       }
 
       console.log(`Alternatif ${alt.nama}:`, {
-        distancePositive,
-        distanceNegative,
-        totalDistance,
-        nilaiPreferensi,
+        distancePositive: distancePositive.toFixed(3),
+        distanceNegative: distanceNegative.toFixed(3),
+        totalDistance: totalDistance.toFixed(3),
+        nilaiPreferensi: nilaiPreferensi.toFixed(3),
       });
 
       results.push({
