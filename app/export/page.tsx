@@ -48,12 +48,12 @@ export default function ExportPage() {
       setError(null);
 
       // Fetch kriteria
-      const { data: kriteriaData, error: kriteriaError } = await supabase.from("kriteria").select("*").eq("user_id", user?.id).order("nama");
+      const { data: kriteriaData, error: kriteriaError } = await supabase.from("kriteria").select("*").eq("user_id", user?.id);
 
       if (kriteriaError) throw kriteriaError;
 
       // Fetch alternatif
-      const { data: alternatifData, error: alternatifError } = await supabase.from("alternatif").select("*").eq("user_id", user?.id).order("nama");
+      const { data: alternatifData, error: alternatifError } = await supabase.from("alternatif").select("*").eq("user_id", user?.id);
 
       if (alternatifError) throw alternatifError;
 
@@ -92,8 +92,56 @@ export default function ExportPage() {
         return;
       }
 
+      // Custom sorting for kriteria to match other pages
+      const kriteriaPositionMap: Record<string, number> = {
+        "kualitas": 0, "daya serap": 1, "tekstur": 2, "tesktur": 2,
+        "harga permeter": 3, "ketersediaan di pasar": 4, "ramah lingkungan": 5,
+        "kemudahan proses produksi batik": 6,
+        "Kualitas": 0, "Daya serap": 1, "Tekstur": 2, "Tesktur": 2,
+        "Harga permeter": 3, "Ketersediaan di pasar": 4, "Ramah lingkungan": 5,
+        "Kemudahan proses produksi batik": 6,
+      };
+
+      const getKriteriaIndex = (kriteriaName: string) => {
+        if (kriteriaPositionMap[kriteriaName] !== undefined) return kriteriaPositionMap[kriteriaName];
+        const lowerName = kriteriaName.toLowerCase().trim();
+        if (kriteriaPositionMap[lowerName] !== undefined) return kriteriaPositionMap[lowerName];
+        if (lowerName.includes("kualitas")) return 0;
+        if (lowerName.includes("daya") && lowerName.includes("serap")) return 1;
+        if (lowerName.includes("tekstur") || lowerName.includes("tesktur")) return 2;
+        if (lowerName.includes("harga")) return 3;
+        if (lowerName.includes("ketersediaan")) return 4;
+        if (lowerName.includes("ramah")) return 5;
+        if (lowerName.includes("kemudahan") || lowerName.includes("proses") || lowerName.includes("produksi")) return 6;
+        return 999;
+      };
+
+      // Custom sorting for alternatif to match other pages
+      const alternatifPositionMap: Record<string, number> = {
+        "Kain primisima": 0, "katun biasa": 1, "Kain doby": 2,
+        "kain viscose": 3, "kain sutra": 4, "poliester": 5, "rayon": 6,
+      };
+
+      const getAlternatifIndex = (alternatifName: string) => {
+        if (alternatifPositionMap[alternatifName] !== undefined) return alternatifPositionMap[alternatifName];
+        const lowerName = alternatifName.toLowerCase().trim();
+        const matchingKey = Object.keys(alternatifPositionMap).find(key => key.toLowerCase() === lowerName);
+        if (matchingKey) return alternatifPositionMap[matchingKey];
+        if (lowerName.includes("primisma") || lowerName.includes("prisma")) return 0;
+        if (lowerName.includes("katun") && (lowerName.includes("biasa") || !lowerName.includes("dobi"))) return 1;
+        if (lowerName.includes("doby") || lowerName.includes("dobi")) return 2;
+        if (lowerName.includes("viscose")) return 3;
+        if (lowerName.includes("sutra")) return 4;
+        if (lowerName.includes("poliester") || lowerName.includes("polyester")) return 5;
+        if (lowerName.includes("rayon")) return 6;
+        return 999;
+      };
+
+      const sortedKriteriaData = kriteriaData.sort((a, b) => getKriteriaIndex(a.nama) - getKriteriaIndex(b.nama));
+      const sortedAlternatifData = alternatifData.sort((a, b) => getAlternatifIndex(a.nama) - getAlternatifIndex(b.nama));
+
       // Calculate normalized weights
-      const totalBobot = kriteriaData.reduce((sum, k) => sum + k.bobot, 0);
+      const totalBobot = sortedKriteriaData.reduce((sum, k) => sum + k.bobot, 0);
 
       // Build report data
       const reportData: ReportData = {
@@ -102,10 +150,10 @@ export default function ExportPage() {
           subtitle: "Menggunakan Metode TOPSIS (Technique for Order Preference by Similarity to Ideal Solution)",
           generatedAt: new Date(),
           generatedBy: user?.email || "User",
-          totalKriteria: kriteriaData.length,
-          totalAlternatif: alternatifData.length,
+          totalKriteria: sortedKriteriaData.length,
+          totalAlternatif: sortedAlternatifData.length,
         },
-        kriteria: kriteriaData.map((k) => ({
+        kriteria: sortedKriteriaData.map((k) => ({
           nama: k.nama,
           bobot: k.bobot,
           atribut: k.atribut,
@@ -286,7 +334,7 @@ export default function ExportPage() {
     <div class="summary">
         <h3>Ringkasan Eksekutif</h3>
         <p>Analisis pemilihan bahan kain telah dilakukan menggunakan metode TOPSIS dengan ${kriteria.length} kriteria dan ${alternatif.length} alternatif. 
-        Hasil menunjukkan bahwa <strong>${rankingData[0].nama}</strong> merupakan pilihan terbaik dengan nilai preferensi ${rankingData[0].preferensi.toFixed(4)} (${(rankingData[0].preferensi * 100).toFixed(1)}%).</p>
+        Hasil menunjukkan bahwa <strong>${rankingData[0].nama}</strong> merupakan pilihan terbaik dengan nilai preferensi ${rankingData[0].preferensi.toFixed(4)}.</p>
     </div>
 
     <div class="section">
@@ -445,7 +493,7 @@ export default function ExportPage() {
                     <th class="center">Ranking</th>
                     <th>Alternatif</th>
                     <th class="center">Nilai Preferensi</th>
-                    <th class="center">Persentase</th>
+                    <th class="center">Nilai Preferensi</th>
                 </tr>
             </thead>
             <tbody>
@@ -456,7 +504,7 @@ export default function ExportPage() {
                     <td class="center"><strong>${idx + 1}</strong></td>
                     <td><strong>${item.nama}</strong></td>
                     <td class="number">${item.preferensi.toFixed(4)}</td>
-                    <td class="number">${(item.preferensi * 100).toFixed(1)}%</td>
+                    <td class="number">${item.preferensi.toFixed(4)}</td>
                 </tr>
                 `
                   )
@@ -470,12 +518,12 @@ export default function ExportPage() {
         <div class="summary">
             <p><strong>Kesimpulan:</strong></p>
             <p>Berdasarkan analisis menggunakan metode TOPSIS, <strong>${rankingData[0].nama}</strong> merupakan alternatif bahan kain terbaik 
-            dengan nilai preferensi ${rankingData[0].preferensi.toFixed(4)} (${(rankingData[0].preferensi * 100).toFixed(1)}%). 
+            dengan nilai preferensi ${rankingData[0].preferensi.toFixed(4)}. 
             Alternatif ini unggul karena memiliki jarak terdekat dengan solusi ideal positif dan terjauh dari solusi ideal negatif.</p>
             
             <p><strong>Urutan Ranking:</strong></p>
             <ol>
-                ${rankingData.map((item) => `<li>${item.nama} - ${(item.preferensi * 100).toFixed(1)}%</li>`).join("")}
+                ${rankingData.map((item) => `<li>${item.nama} - ${item.preferensi.toFixed(4)}</li>`).join("")}
             </ol>
         </div>
     </div>
@@ -519,10 +567,8 @@ export default function ExportPage() {
       // Matriks ternormalisasi
       const normalisasi = penilaianMatrix.map((row) => row.map((v, j) => (pembagi[j] > 0 ? v / pembagi[j] : 0)));
 
-      // Bobot normal dan matriks terbobot
-      const totalBobot = bobotArr.reduce((a, b) => a + b, 0);
-      const bobotNormal = bobotArr.map((b) => (totalBobot > 0 ? b / totalBobot : 0));
-      const terbobot = normalisasi.map((row) => row.map((v, j) => v * bobotNormal[j]));
+      // Bobot langsung tanpa normalisasi (untuk sesuai dengan Excel)
+      const terbobot = normalisasi.map((row) => row.map((v, j) => v * bobotArr[j]));
 
       // Solusi ideal positif/negatif
       const idealPositif = kriteria.map((k, j) => {
@@ -810,10 +856,10 @@ export default function ExportPage() {
                     <div className="text-lg font-bold text-orange-600">Sutra</div>
                     <div className="text-xs text-neutral-600">Terbaik</div>
                   </div>
-                  <div>
-                    <div className="text-lg font-bold text-purple-600">82.3%</div>
-                    <div className="text-xs text-neutral-600">Nilai Tertinggi</div>
-                  </div>
+                                  <div>
+                  <div className="text-lg font-bold text-purple-600">0.8234</div>
+                  <div className="text-xs text-neutral-600">Nilai Tertinggi</div>
+                </div>
                 </div>
               </div>
             </div>
@@ -885,7 +931,7 @@ export default function ExportPage() {
                     <TableHead>Ranking</TableHead>
                     <TableHead>Alternatif</TableHead>
                     <TableHead>Nilai Preferensi</TableHead>
-                    <TableHead>Persentase</TableHead>
+                    <TableHead>Nilai Preferensi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -898,7 +944,7 @@ export default function ExportPage() {
                         </TableCell>
                         <TableCell className="font-medium">{alt.nama}</TableCell>
                         <TableCell>{alt.nilaiPreferensi.toFixed(4)}</TableCell>
-                        <TableCell>{(alt.nilaiPreferensi * 100).toFixed(1)}%</TableCell>
+                        <TableCell>{alt.nilaiPreferensi.toFixed(4)}</TableCell>
                       </TableRow>
                     ))}
                 </TableBody>
@@ -910,7 +956,7 @@ export default function ExportPage() {
               <h2 className="text-xl font-bold text-neutral-800 mb-4">Kesimpulan</h2>
               <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-lg">
                 <p className="text-neutral-700">
-                  Berdasarkan analisis menggunakan metode TOPSIS, <strong>Sutra</strong> merupakan alternatif bahan kain terbaik dengan nilai preferensi 0.8234 (82.3%). Alternatif ini unggul karena memiliki jarak terdekat dengan solusi
+                  Berdasarkan analisis menggunakan metode TOPSIS, <strong>Sutra</strong> merupakan alternatif bahan kain terbaik dengan nilai preferensi 0.8234. Alternatif ini unggul karena memiliki jarak terdekat dengan solusi
                   ideal positif dan terjauh dari solusi ideal negatif.
                 </p>
               </div>

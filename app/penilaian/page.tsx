@@ -39,12 +39,12 @@ export default function PenilaianPage() {
       setError(null);
 
       // Fetch kriteria
-      const { data: kriteriaData, error: kriteriaError } = await supabase.from("kriteria").select("*").eq("user_id", user.id).order("nama");
+      const { data: kriteriaData, error: kriteriaError } = await supabase.from("kriteria").select("*").eq("user_id", user.id);
 
       if (kriteriaError) throw kriteriaError;
 
       // Fetch alternatif
-      const { data: alternatifData, error: alternatifError } = await supabase.from("alternatif").select("*").eq("user_id", user?.id).order("nama");
+      const { data: alternatifData, error: alternatifError } = await supabase.from("alternatif").select("*").eq("user_id", user?.id);
 
       if (alternatifError) throw alternatifError;
 
@@ -72,8 +72,105 @@ export default function PenilaianPage() {
         deskripsi: item.deskripsi,
       }));
 
-      setKriteria(mappedKriteria);
-      setAlternatif(mappedAlternatif);
+      // Custom sorting for kriteria to match Excel order
+      // Direct mapping of names to positions based on actual database names
+      const kriteriaPositionMap: Record<string, number> = {
+        // Exact matches (case insensitive)
+        "kualitas": 0,
+        "daya serap": 1,
+        "tekstur": 2,
+        "tesktur": 2,  // Actual database name (missing 'r')
+        "harga permeter": 3,
+        "ketersediaan di pasar": 4,
+        "ramah lingkungan": 5,
+        "kemudahan proses produksi batik": 6,
+        
+        // Alternative variations
+        "Kualitas": 0,
+        "Daya serap": 1,
+        "Tekstur": 2,
+        "Tesktur": 2,  // Actual database name (missing 'r')
+        "Harga permeter": 3,
+        "Ketersediaan di pasar": 4,
+        "Ramah lingkungan": 5,
+        "Kemudahan proses produksi batik": 6,
+      };
+
+      const getKriteriaIndex = (kriteriaName: string) => {
+        // Try exact match first
+        if (kriteriaPositionMap[kriteriaName] !== undefined) {
+          return kriteriaPositionMap[kriteriaName];
+        }
+        
+        // Try case-insensitive match
+        const lowerName = kriteriaName.toLowerCase().trim();
+        if (kriteriaPositionMap[lowerName] !== undefined) {
+          return kriteriaPositionMap[lowerName];
+        }
+        
+        // Fallback keyword matching
+        if (lowerName.includes("kualitas")) return 0;
+        if (lowerName.includes("daya") && lowerName.includes("serap")) return 1;
+        if (lowerName.includes("tekstur") || lowerName.includes("tesktur")) return 2;
+        if (lowerName.includes("harga")) return 3;
+        if (lowerName.includes("ketersediaan")) return 4;
+        if (lowerName.includes("ramah")) return 5;
+        if (lowerName.includes("kemudahan") || lowerName.includes("proses") || lowerName.includes("produksi")) return 6;
+        
+        return 999; // Unknown items go to end
+      };
+
+      const sortedKriteria = mappedKriteria.sort((a, b) => {
+        const indexA = getKriteriaIndex(a.nama);
+        const indexB = getKriteriaIndex(b.nama);
+        return indexA - indexB;
+      });
+
+      // Custom sorting for alternatif to match numbered order (1-7)
+      const alternatifPositionMap: Record<string, number> = {
+        // Exact matches based on the interface
+        "Kain primisima": 0,
+        "katun biasa": 1,
+        "Kain doby": 2,
+        "kain viscose": 3,
+        "kain sutra": 4,
+        "poliester": 5,
+        "rayon": 6,
+      };
+
+      const getAlternatifIndex = (alternatifName: string) => {
+        // Try exact match first
+        if (alternatifPositionMap[alternatifName] !== undefined) {
+          return alternatifPositionMap[alternatifName];
+        }
+        
+        // Try case-insensitive match
+        const lowerName = alternatifName.toLowerCase().trim();
+        const matchingKey = Object.keys(alternatifPositionMap).find(key => key.toLowerCase() === lowerName);
+        if (matchingKey) {
+          return alternatifPositionMap[matchingKey];
+        }
+        
+        // Fallback keyword matching
+        if (lowerName.includes("primisma") || lowerName.includes("prisma")) return 0;
+        if (lowerName.includes("katun") && (lowerName.includes("biasa") || !lowerName.includes("dobi"))) return 1;
+        if (lowerName.includes("doby") || lowerName.includes("dobi")) return 2;
+        if (lowerName.includes("viscose")) return 3;
+        if (lowerName.includes("sutra")) return 4;
+        if (lowerName.includes("poliester") || lowerName.includes("polyester")) return 5;
+        if (lowerName.includes("rayon")) return 6;
+        
+        return 999; // Unknown items go to end
+      };
+
+      const sortedAlternatif = mappedAlternatif.sort((a, b) => {
+        const indexA = getAlternatifIndex(a.nama);
+        const indexB = getAlternatifIndex(b.nama);
+        return indexA - indexB;
+      });
+
+      setKriteria(sortedKriteria);
+      setAlternatif(sortedAlternatif);
 
       // Fetch existing penilaian
       const { data: penilaianData, error: penilaianError } = await supabase.from("penilaian").select("*").eq("user_id", user.id);
@@ -82,9 +179,9 @@ export default function PenilaianPage() {
 
       // Initialize penilaian matrix
       const initialData: LocalPenilaianData = {};
-      mappedAlternatif.forEach((alt) => {
+      sortedAlternatif.forEach((alt) => {
         initialData[alt.id] = {};
-        mappedKriteria.forEach((krit) => {
+        sortedKriteria.forEach((krit) => {
           const existingPenilaian = penilaianData?.find((p) => p.alternatif_id === alt.id && p.kriteria_id === krit.id);
           initialData[alt.id][krit.id] = existingPenilaian?.nilai || 0;
         });
@@ -93,7 +190,7 @@ export default function PenilaianPage() {
       setPenilaian(initialData);
 
       // Check if all assessments are completed
-      const totalRequired = mappedKriteria.length * mappedAlternatif.length;
+      const totalRequired = sortedKriteria.length * sortedAlternatif.length;
       const completed = penilaianData?.length || 0;
       setIsSaved(completed === totalRequired && completed > 0);
     } catch (err) {

@@ -153,7 +153,7 @@ export default function KriteriaPage() {
   const avgBobot = kriteria.length > 0 ? (totalBobot / kriteria.length).toFixed(1) : "0";
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-6">
+    <div className="max-w-7xl mx-auto">
       <PageHeader title="Input Kriteria" description="Tambahkan kriteria yang akan digunakan dalam penilaian bahan kain" />
 
       {/* Error Alert */}
@@ -164,7 +164,7 @@ export default function KriteriaPage() {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-6 md:mb-8">
         <StatsCard title="Total Kriteria" value={kriteria.length} icon={ClipboardList} color="indigo" />
         <StatsCard title="Total Bobot" value={totalBobot} icon={CheckCircle} color="emerald" />
         <StatsCard title="Rata-rata Bobot" value={avgBobot} icon={Shirt} color="orange" />
@@ -172,13 +172,15 @@ export default function KriteriaPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Form */}
-        <KriteriaForm onSubmit={handleSubmit} editData={editingKriteria || undefined} onCancel={editingKriteria ? handleCancel : undefined} loading={saving} />
+        <div className="order-2 lg:order-1">
+          <KriteriaForm onSubmit={handleSubmit} editData={editingKriteria || undefined} onCancel={editingKriteria ? handleCancel : undefined} loading={saving} />
+        </div>
 
         {/* Kriteria Cards */}
-        <div className="space-y-4">
-          <h3 className="text-xl font-semibold text-neutral-700">Daftar Kriteria ({kriteria.length})</h3>
+        <div className="space-y-4 order-1 lg:order-2">
+          <h3 className="text-lg md:text-xl font-semibold text-neutral-700">Daftar Kriteria ({kriteria.length})</h3>
           {kriteria.length === 0 ? (
-            <EmptyState icon={ClipboardList} title="Belum ada kriteria yang ditambahkan" description="Mulai dengan menambahkan kriteria di form sebelah kiri" />
+            <EmptyState icon={ClipboardList} title="Belum ada kriteria yang ditambahkan" description="Mulai dengan menambahkan kriteria di form di bawah" />
           ) : (
             <div className="space-y-3 max-h-96 overflow-y-auto">
               {kriteria.map((item, index) => (
@@ -191,7 +193,7 @@ export default function KriteriaPage() {
 
       {/* Table */}
       {kriteria.length > 0 && (
-        <div className="mt-8">
+        <div className="mt-6 md:mt-8">
           <KriteriaTable kriteria={kriteria} onEdit={handleEdit} onDelete={handleDelete} />
         </div>
       )}

@@ -167,7 +167,7 @@ export default function HasilPage() {
               </div>
               <div>
                 <p className="text-sm text-neutral-600">Nilai Preferensi</p>
-                <p className="text-lg font-bold text-emerald-600">{(winner?.nilai_preferensi * 100).toFixed(1)}%</p>
+                <p className="text-lg font-bold text-emerald-600">{winner?.nilai_preferensi.toFixed(4)}</p>
               </div>
             </div>
           </CardContent>
@@ -195,7 +195,7 @@ export default function HasilPage() {
               </div>
               <div>
                 <p className="text-sm text-neutral-600">Margin Kemenangan</p>
-                <p className="text-lg font-bold text-purple-600">{secondPlace ? ((winner.nilai_preferensi - secondPlace.nilai_preferensi) * 100).toFixed(1) : "0"}%</p>
+                <p className="text-lg font-bold text-purple-600">{secondPlace ? (winner.nilai_preferensi - secondPlace.nilai_preferensi).toFixed(4) : "0.0000"}</p>
               </div>
             </div>
           </CardContent>
@@ -220,7 +220,7 @@ export default function HasilPage() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-neutral-600">Nilai Preferensi</span>
-                  <span className="font-semibold text-lg text-indigo-600">{(result.nilai_preferensi * 100).toFixed(1)}%</span>
+                  <span className="font-semibold text-lg text-indigo-600">{result.nilai_preferensi.toFixed(4)}</span>
                 </div>
 
                 <div className="w-full bg-neutral-200 rounded-full h-2">
@@ -261,7 +261,7 @@ export default function HasilPage() {
           <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-6">
             <h3 className="text-lg font-bold text-neutral-800 mb-2">{winner?.alternatif?.nama} adalah pilihan terbaik</h3>
             <p className="text-neutral-700 mb-4">
-              Berdasarkan analisis menggunakan metode TOPSIS, <strong>{winner?.alternatif?.nama}</strong> memiliki nilai preferensi tertinggi sebesar <strong>{(winner?.nilai_preferensi * 100).toFixed(1)}%</strong>. Alternatif ini dipilih
+              Berdasarkan analisis menggunakan metode TOPSIS, <strong>{winner?.alternatif?.nama}</strong> memiliki nilai preferensi tertinggi sebesar <strong>{winner?.nilai_preferensi.toFixed(4)}</strong>. Alternatif ini dipilih
               karena memiliki jarak terdekat dengan solusi ideal positif dan terjauh dari solusi ideal negatif.
             </p>
 

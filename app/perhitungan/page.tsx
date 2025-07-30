@@ -29,12 +29,12 @@ export default function PerhitunganPage() {
       setError(null);
 
       // Fetch kriteria
-      const { data: kriteriaData, error: kriteriaError } = await supabase.from("kriteria").select("*").eq("user_id", user.id).order("nama");
+      const { data: kriteriaData, error: kriteriaError } = await supabase.from("kriteria").select("*").eq("user_id", user.id);
 
       if (kriteriaError) throw kriteriaError;
 
       // Fetch alternatif
-      const { data: alternatifData, error: alternatifError } = await supabase.from("alternatif").select("*").eq("user_id", user.id).order("nama");
+      const { data: alternatifData, error: alternatifError } = await supabase.from("alternatif").select("*").eq("user_id", user.id);
 
       if (alternatifError) throw alternatifError;
 
@@ -56,13 +56,100 @@ export default function PerhitunganPage() {
         deskripsi: item.deskripsi,
       }));
 
+      // Custom sorting for kriteria to match penilaian page order
+      const kriteriaPositionMap: Record<string, number> = {
+        "kualitas": 0,
+        "daya serap": 1,
+        "tekstur": 2,
+        "tesktur": 2,  // Actual database name (missing 'r')
+        "harga permeter": 3,
+        "ketersediaan di pasar": 4,
+        "ramah lingkungan": 5,
+        "kemudahan proses produksi batik": 6,
+        
+        "Kualitas": 0,
+        "Daya serap": 1,
+        "Tekstur": 2,
+        "Tesktur": 2,  // Actual database name (missing 'r')
+        "Harga permeter": 3,
+        "Ketersediaan di pasar": 4,
+        "Ramah lingkungan": 5,
+        "Kemudahan proses produksi batik": 6,
+      };
+
+      const getKriteriaIndex = (kriteriaName: string) => {
+        if (kriteriaPositionMap[kriteriaName] !== undefined) {
+          return kriteriaPositionMap[kriteriaName];
+        }
+        
+        const lowerName = kriteriaName.toLowerCase().trim();
+        if (kriteriaPositionMap[lowerName] !== undefined) {
+          return kriteriaPositionMap[lowerName];
+        }
+        
+        if (lowerName.includes("kualitas")) return 0;
+        if (lowerName.includes("daya") && lowerName.includes("serap")) return 1;
+        if (lowerName.includes("tekstur") || lowerName.includes("tesktur")) return 2;
+        if (lowerName.includes("harga")) return 3;
+        if (lowerName.includes("ketersediaan")) return 4;
+        if (lowerName.includes("ramah")) return 5;
+        if (lowerName.includes("kemudahan") || lowerName.includes("proses") || lowerName.includes("produksi")) return 6;
+        
+        return 999;
+      };
+
+      // Custom sorting for alternatif to match penilaian page order
+      const alternatifPositionMap: Record<string, number> = {
+        "Kain primisima": 0,
+        "katun biasa": 1,
+        "Kain doby": 2,
+        "kain viscose": 3,
+        "kain sutra": 4,
+        "poliester": 5,
+        "rayon": 6,
+      };
+
+      const getAlternatifIndex = (alternatifName: string) => {
+        if (alternatifPositionMap[alternatifName] !== undefined) {
+          return alternatifPositionMap[alternatifName];
+        }
+        
+        const lowerName = alternatifName.toLowerCase().trim();
+        const matchingKey = Object.keys(alternatifPositionMap).find(key => key.toLowerCase() === lowerName);
+        if (matchingKey) {
+          return alternatifPositionMap[matchingKey];
+        }
+        
+        if (lowerName.includes("primisma") || lowerName.includes("prisma")) return 0;
+        if (lowerName.includes("katun") && (lowerName.includes("biasa") || !lowerName.includes("dobi"))) return 1;
+        if (lowerName.includes("doby") || lowerName.includes("dobi")) return 2;
+        if (lowerName.includes("viscose")) return 3;
+        if (lowerName.includes("sutra")) return 4;
+        if (lowerName.includes("poliester") || lowerName.includes("polyester")) return 5;
+        if (lowerName.includes("rayon")) return 6;
+        
+        return 999;
+      };
+
+      const sortedKriteria = mappedKriteria.sort((a, b) => {
+        const indexA = getKriteriaIndex(a.nama);
+        const indexB = getKriteriaIndex(b.nama);
+        return indexA - indexB;
+      });
+
+      const sortedAlternatif = mappedAlternatif.sort((a, b) => {
+        const indexA = getAlternatifIndex(a.nama);
+        const indexB = getAlternatifIndex(b.nama);
+        return indexA - indexB;
+      });
+
       // Check if we have complete data
-      if (!mappedKriteria.length) {
+      if (!sortedKriteria.length) {
         setError("Belum ada kriteria yang ditambahkan. Silakan tambahkan kriteria terlebih dahulu.");
         return;
       }
 
-      if (!mappedAlternatif.length) {
+      if (!sortedAlternatif.length) {
         setError("Belum ada alternatif yang ditambahkan. Silakan tambahkan alternatif terlebih dahulu.");
         return;
       }
@@ -73,22 +160,22 @@ export default function PerhitunganPage() {
       }
 
       // Check if all combinations are assessed
-      const expectedAssessments = mappedKriteria.length * mappedAlternatif.length;
+      const expectedAssessments = sortedKriteria.length * sortedAlternatif.length;
       console.log("Pengecekan penilaian:", {
-        kriteriaCount: mappedKriteria.length,
-        alternatifCount: mappedAlternatif.length,
+        kriteriaCount: sortedKriteria.length,
+        alternatifCount: sortedAlternatif.length,
         expectedAssessments,
         actualAssessments: penilaianData.length,
         penilaianData,
       });
 
       if (penilaianData.length < expectedAssessments) {
-        setError(`Penilaian belum lengkap. Diperlukan ${expectedAssessments} penilaian (${mappedKriteria.length} kriteria × ${mappedAlternatif.length} alternatif), saat ini hanya ada ${penilaianData.length}.`);
+        setError(`Penilaian belum lengkap. Diperlukan ${expectedAssessments} penilaian (${sortedKriteria.length} kriteria × ${sortedAlternatif.length} alternatif), saat ini hanya ada ${penilaianData.length}.`);
         return;
       }
 
-      setKriteria(mappedKriteria);
-      setAlternatif(mappedAlternatif);
+      setKriteria(sortedKriteria);
+      setAlternatif(sortedAlternatif);
 
       // Convert penilaian to the expected format
       const penilaianMap: { [key: string]: { [key: string]: number } } = {};
@@ -176,16 +263,16 @@ export default function PerhitunganPage() {
   // Calculate weighted normalized matrix
   const calculateWeightedMatrix = (normalizedMatrix: { [key: string]: { [key: string]: number } }) => {
     const weighted: { [key: string]: { [key: string]: number } } = {};
-    const totalBobot = kriteria.reduce((sum, k) => sum + k.bobot, 0);
 
     alternatif.forEach((alt) => {
       weighted[alt.id] = {};
       kriteria.forEach((kriteriaItem) => {
-        const normalizedBobot = totalBobot > 0 ? kriteriaItem.bobot / totalBobot : 1 / kriteria.length;
+        // Use weight directly without normalizing (to match Excel)
+        const weight = kriteriaItem.bobot;
         const normalizedValue = normalizedMatrix[alt.id][kriteriaItem.id];
 
-        if (!isNaN(normalizedValue) && !isNaN(normalizedBobot)) {
-          weighted[alt.id][kriteriaItem.id] = normalizedValue * normalizedBobot;
+        if (!isNaN(normalizedValue) && !isNaN(weight)) {
+          weighted[alt.id][kriteriaItem.id] = normalizedValue * weight;
         } else {
           weighted[alt.id][kriteriaItem.id] = 0;
         }
@@ -272,10 +359,10 @@ export default function PerhitunganPage() {
       }
 
       console.log(`Alternatif ${alt.nama}:`, {
-        distancePositive,
-        distanceNegative,
-        totalDistance,
-        nilaiPreferensi,
+        distancePositive: distancePositive.toFixed(3),
+        distanceNegative: distanceNegative.toFixed(3),
+        totalDistance: totalDistance.toFixed(3),
+        nilaiPreferensi: nilaiPreferensi.toFixed(3),
       });
 
       results.push({
@@ -359,16 +446,34 @@ export default function PerhitunganPage() {
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-6">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-neutral-800 mb-2">Proses Perhitungan TOPSIS</h1>
-        <p className="text-neutral-600">Ikuti langkah-langkah perhitungan metode TOPSIS untuk mendapatkan hasil akhir</p>
+    <div className="max-w-7xl mx-auto">
+      <div className="mb-6 md:mb-8">
+        <h1 className="responsive-text-xl font-bold tracking-tight text-neutral-800 mb-2">Proses Perhitungan TOPSIS</h1>
+        <p className="responsive-text-sm text-neutral-600">Ikuti langkah-langkah perhitungan metode TOPSIS untuk mendapatkan hasil akhir</p>
       </div>
 
-      {/* Progress Steps */}
-      <Card className="mb-6">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
+      {/* Progress Steps - Mobile Optimized */}
+      <Card className="mb-4 md:mb-6">
+        <CardContent className="pt-4 md:pt-6">
+          {/* Mobile Progress - Vertical */}
+          <div className="block md:hidden">
+            <div className="space-y-3">
+              {steps.map((step) => (
+                <div key={step.id} className={`flex items-center p-3 rounded-lg ${currentStep >= step.id ? "bg-indigo-50 border border-indigo-200" : "bg-neutral-50"}`}>
+                  <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${currentStep >= step.id ? "bg-indigo-600 border-indigo-600 text-white" : "border-neutral-300 text-neutral-400"}`}>
+                    {currentStep > step.id ? <CheckCircle className="w-4 h-4" /> : <span className="text-xs font-medium">{step.id}</span>}
+                  </div>
+                  <div className="ml-3 min-w-0 flex-1">
+                    <div className={`text-sm font-medium ${currentStep >= step.id ? "text-neutral-800" : "text-neutral-400"}`}>{step.title}</div>
+                    <div className="text-xs text-neutral-500">{step.description}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Desktop Progress - Horizontal */}
+          <div className="hidden md:flex items-center justify-between">
             {steps.map((step, index) => (
               <div key={step.id} className="flex items-center">
                 <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${currentStep >= step.id ? "bg-indigo-600 border-indigo-600 text-white" : "border-neutral-300 text-neutral-400"}`}>
@@ -389,11 +494,31 @@ export default function PerhitunganPage() {
       {currentStep === 1 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl font-semibold text-neutral-700">Langkah 1: Matriks Keputusan</CardTitle>
-            <p className="text-sm text-neutral-600">Matriks yang berisi penilaian setiap alternatif terhadap kriteria</p>
+            <CardTitle className="responsive-text-lg font-semibold text-neutral-700">Langkah 1: Matriks Keputusan</CardTitle>
+            <p className="responsive-text-xs text-neutral-600">Matriks yang berisi penilaian setiap alternatif terhadap kriteria</p>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            {/* Mobile Card View */}
+            <div className="mobile-card-layout space-y-4">
+              {alternatif.map((alt) => (
+                <Card key={alt.id} className="border border-neutral-200">
+                  <CardContent className="p-4">
+                    <h4 className="font-semibold text-neutral-800 mb-3">{alt.nama}</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      {kriteria.map((kriteriaItem) => (
+                        <div key={kriteriaItem.id} className="flex justify-between items-center">
+                          <span className="text-sm text-neutral-600 truncate pr-2">{kriteriaItem.nama}</span>
+                          <span className="font-medium">{penilaian[alt.id][kriteriaItem.id]}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="desktop-table-layout table-mobile-scroll">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -429,13 +554,33 @@ export default function PerhitunganPage() {
       {currentStep === 2 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl font-semibold text-neutral-700">Langkah 2: Normalisasi Matriks</CardTitle>
-            <p className="text-sm text-neutral-600">
+            <CardTitle className="responsive-text-lg font-semibold text-neutral-700">Langkah 2: Normalisasi Matriks</CardTitle>
+            <p className="responsive-text-xs text-neutral-600">
               Normalisasi menggunakan rumus: r<sub>ij</sub> = x<sub>ij</sub> / √(Σx<sub>ij</sub>²)
             </p>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
+            {/* Mobile Card View */}
+            <div className="mobile-card-layout space-y-4">
+              {alternatif.map((alt) => (
+                <Card key={alt.id} className="border border-neutral-200">
+                  <CardContent className="p-4">
+                    <h4 className="font-semibold text-neutral-800 mb-3">{alt.nama}</h4>
+                    <div className="grid grid-cols-1 gap-2">
+                      {kriteria.map((kriteriaItem) => (
+                        <div key={kriteriaItem.id} className="flex justify-between items-center py-1">
+                          <span className="text-sm text-neutral-600 truncate pr-2">{kriteriaItem.nama}</span>
+                          <span className="font-mono text-sm">{normalizedMatrix[alt.id][kriteriaItem.id].toFixed(4)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="desktop-table-layout table-mobile-scroll">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -452,7 +597,7 @@ export default function PerhitunganPage() {
                     <TableRow key={alt.id}>
                       <TableCell className="font-medium">{alt.nama}</TableCell>
                       {kriteria.map((kriteriaItem) => (
-                        <TableCell key={kriteriaItem.id} className="text-center">
+                        <TableCell key={kriteriaItem.id} className="text-center font-mono text-sm">
                           {normalizedMatrix[alt.id][kriteriaItem.id].toFixed(4)}
                         </TableCell>
                       ))}
@@ -468,25 +613,46 @@ export default function PerhitunganPage() {
       {currentStep === 3 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl font-semibold text-neutral-700">Langkah 3: Matriks Ternormalisasi Terbobot</CardTitle>
-            <p className="text-sm text-neutral-600">Mengalikan matriks ternormalisasi dengan bobot kriteria</p>
+            <CardTitle className="responsive-text-lg font-semibold text-neutral-700">Langkah 3: Matriks Ternormalisasi Terbobot</CardTitle>
+            <p className="responsive-text-xs text-neutral-600">Mengalikan matriks ternormalisasi dengan bobot kriteria</p>
           </CardHeader>
           <CardContent>
             <div className="mb-4">
               <h4 className="font-medium text-neutral-800 mb-2">Bobot Kriteria:</h4>
-              <div className="flex gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-wrap gap-2 text-sm">
                 {kriteria.map((kriteriaItem) => {
                   const totalBobot = kriteria.reduce((sum, k) => sum + k.bobot, 0);
                   const normalizedBobot = ((kriteriaItem.bobot / totalBobot) * 100).toFixed(1);
                   return (
-                    <span key={kriteriaItem.id} className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded">
+                    <span key={kriteriaItem.id} className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-center">
                       {kriteriaItem.nama}: {normalizedBobot}%
                     </span>
                   );
                 })}
               </div>
             </div>
-            <div className="overflow-x-auto">
+
+            {/* Mobile Card View */}
+            <div className="mobile-card-layout space-y-4">
+              {alternatif.map((alt) => (
+                <Card key={alt.id} className="border border-neutral-200">
+                  <CardContent className="p-4">
+                    <h4 className="font-semibold text-neutral-800 mb-3">{alt.nama}</h4>
+                    <div className="grid grid-cols-1 gap-2">
+                      {kriteria.map((kriteriaItem) => (
+                        <div key={kriteriaItem.id} className="flex justify-between items-center py-1">
+                          <span className="text-sm text-neutral-600 truncate pr-2">{kriteriaItem.nama}</span>
+                          <span className="font-mono text-sm">{weightedMatrix[alt.id][kriteriaItem.id].toFixed(4)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="desktop-table-layout table-mobile-scroll">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -552,9 +718,9 @@ export default function PerhitunganPage() {
       )}
 
       {/* Action Button */}
-      <div className="mt-8 flex justify-center">
+      <div className="mt-6 md:mt-8 flex justify-center">
         {currentStep < 4 ? (
-          <Button onClick={handleNextStep} disabled={isCalculating} className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700">
+          <Button onClick={handleNextStep} disabled={isCalculating} className="w-full sm:w-auto px-6 md:px-8 py-3 bg-indigo-600 hover:bg-indigo-700">
             {isCalculating ? (
               <>
                 <Calculator className="w-4 h-4 mr-2 animate-spin" />
@@ -563,28 +729,32 @@ export default function PerhitunganPage() {
             ) : (
               <>
                 <Calculator className="w-4 h-4 mr-2" />
-                Lanjutkan Perhitungan
+                <span className="hidden sm:inline">Lanjutkan Perhitungan</span>
+                <span className="sm:hidden">Lanjutkan</span>
               </>
             )}
           </Button>
         ) : currentStep === 4 ? (
-          <Button onClick={handleCalculateResults} disabled={isCalculating} className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700">
+          <Button onClick={handleCalculateResults} disabled={isCalculating} className="w-full sm:w-auto px-6 md:px-8 py-3 bg-emerald-600 hover:bg-emerald-700">
             {isCalculating ? (
               <>
                 <Calculator className="w-4 h-4 mr-2 animate-spin" />
-                Menyimpan Hasil...
+                <span className="hidden sm:inline">Menyimpan Hasil...</span>
+                <span className="sm:hidden">Menyimpan...</span>
               </>
             ) : (
               <>
                 <Calculator className="w-4 h-4 mr-2" />
-                Hitung & Simpan Hasil
+                <span className="hidden sm:inline">Hitung & Simpan Hasil</span>
+                <span className="sm:hidden">Hitung Hasil</span>
               </>
             )}
           </Button>
         ) : (
-          <Button onClick={() => (window.location.href = "/hasil")} className="px-8 py-3 bg-emerald-600 hover:bg-emerald-700">
+          <Button onClick={() => (window.location.href = "/hasil")} className="w-full sm:w-auto px-6 md:px-8 py-3 bg-emerald-600 hover:bg-emerald-700">
             <ArrowRight className="w-4 h-4 mr-2" />
-            Lihat Hasil Akhir
+            <span className="hidden sm:inline">Lihat Hasil Akhir</span>
+            <span className="sm:hidden">Lihat Hasil</span>
           </Button>
         )}
       </div>

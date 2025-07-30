@@ -30,14 +30,41 @@ export function PenilaianTable({ kriteria, alternatif, penilaian, onValueChange 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl font-semibold text-neutral-700">Matriks Penilaian</CardTitle>
-        <div className="flex items-center gap-2 text-sm text-neutral-600">
-          <AlertCircle className="w-4 h-4" />
+        <CardTitle className="text-lg md:text-xl font-semibold text-neutral-700">Matriks Penilaian</CardTitle>
+        <div className="flex items-start gap-2 text-sm text-neutral-600">
+          <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
           <span>Nilai berkisar antara 0-100. Semakin tinggi nilai, semakin baik untuk kriteria Benefit.</span>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
+        {/* Mobile Card View */}
+        <div className="block md:hidden space-y-6">
+          {alternatif.map((alt) => (
+            <Card key={alt.id} className="border border-neutral-200">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold text-neutral-800">{alt.nama}</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-3">
+                  {kriteria.map((k) => (
+                    <div key={k.id} className="flex flex-col space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-neutral-700">{k.nama}</span>
+                        <Badge variant="secondary" className={k.atribut === "Benefit" ? "bg-emerald-100 text-emerald-700 text-xs" : "bg-orange-100 text-orange-700 text-xs"}>
+                          {k.atribut}
+                        </Badge>
+                      </div>
+                      <Input type="number" min="0" max="100" value={penilaian[alt.id]?.[k.id] || ""} onChange={(e) => onValueChange(alt.id, k.id, e.target.value)} className="w-full text-center" placeholder="0-100" />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
